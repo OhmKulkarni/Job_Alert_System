@@ -60,7 +60,7 @@ Before running the Job Alert System, ensure you have the following:
 ### 1. Clone the Repository
 ```bash
 git clone https://github.com/OhmKulkarni/Job_Alert_System
-cd job-alert-system
+cd Job_Alert_System
 ```
 
 ### 2. Install Python Dependencies
