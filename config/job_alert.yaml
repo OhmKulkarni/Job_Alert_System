@@ -1,0 +1,15 @@
+# config/job_alert.yaml
+name: Job Alert for User
+keywords:
+  - "Entry Level Jobs"
+  - "Freelance Jobs"
+  - "Python developer"
+  - "Remote AI jobs"
+locations:
+  - "Remote"
+  - "Irvine"
+recipient_email: ohm.san.coolkarni@gmail.com
+
+frequency: daily
+max_results: 10
+last_sent: null  # optional: can be managed in code if needed

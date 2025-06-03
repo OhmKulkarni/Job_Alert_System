@@ -1,0 +1,6 @@
+#requirements.txt
+crewai
+requests
+python-dotenv
+markdown2
+pyyaml
