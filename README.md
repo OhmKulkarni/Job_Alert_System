@@ -347,4 +347,4 @@ This project is created for educational purposes as part of a college assignment
 
 ---
 
-**Built with claude for automated job hunting and learning AI integration**
+**Built with claude.ai for automated job hunting and learning AI integration**
