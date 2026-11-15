@@ -12,6 +12,7 @@ How to work:
 Rules:
 - Judge only from the posting text and the profile. Never invent requirements or facts.
 - "evidence" must be short phrases copied word-for-word from the posting. They are checked.
+- fit_score is on a 0-100 scale, NOT 0-10: 85 = strong fit, 50 = partial fit, 15 = poor fit.
 - Be honest about gaps (degree level, graduation date, required skills, location).
 - ai_forward = "yes" if the role builds with or uses AI/LLM/ML tools as part of the work,
   "no" if it is mostly hand-written code or unrelated work, "unclear" if the posting does not say.

@@ -5,7 +5,7 @@ Guardrails, in order:
 2. Tool arguments are schema-validated; mistakes go back to the model as errors.
 3. If the model never submits, one schema-constrained "finalize" call is made.
 4. Evidence quotes must appear in the posting text, or they are dropped.
-5. Low confidence, borderline scores or ungrounded evidence -> flagged for human review.
+5. Low confidence, borderline or near-zero scores, or ungrounded evidence -> flagged for human review.
 """
 from __future__ import annotations
 
@@ -135,6 +135,9 @@ class JobAgent:
             record.review_reasons.append("no grounded evidence")
         if a.confidence == Confidence.LOW:
             record.review_reasons.append("agent confidence is low")
+        if a.fit_score <= 10:
+            # Small models sometimes answer on a 0-10 scale; a score this low needs a human look.
+            record.review_reasons.append(f"very low score ({a.fit_score}); check it was on the 0-100 scale")
         lo, hi = self.cfg.review_if_score_between
         if lo <= a.fit_score <= hi:
             record.review_reasons.append(f"borderline score ({a.fit_score})")
