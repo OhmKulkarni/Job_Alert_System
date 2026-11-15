@@ -1,0 +1,100 @@
+# config/settings.yaml
+database: data/jobs.db
+output_dir: out
+
+ollama:
+  base_url: http://localhost:11434
+  # Needs a model with tool calling. Good local options: qwen2.5:7b, llama3.1:8b, mistral-nemo
+  model: qwen2.5:7b
+  temperature: 0.2
+  num_ctx: 8192
+  timeout: 180
+
+agent:
+  max_steps_per_posting: 6        # tool-use turns before the agent must finalize
+  max_llm_calls_per_run: 120      # hard ceiling across the whole run
+  max_postings_per_run: 25        # the rest wait for the next run, best first
+  description_page_chars: 2500    # page size for read_posting (fits small context windows)
+  review_if_score_between: [55, 70]
+  outreach_min_score: 75          # draft a note to your contact above this score
+
+email:
+  send_only_if_new: true
+  subject_prefix: Job Alert
+
+filters:
+  title_must_match: ['\bintern\b', '\binterns\b', '\binternship\b']
+  target_terms: ["summer 2027", "2027"]
+  reject_season_terms: ["winter 2027", "spring 2027", "fall 2027", "fall 2026", "summer 2026", "winter 2026", "co-op"]
+  reject_years: [2025, 2026, 2028]
+  degree_level: masters
+
+  strong_role_terms:
+    - machine learning
+    - ml
+    - ai
+    - artificial intelligence
+    - data science
+    - data scientist
+    - applied scientist
+    - analytics
+    - data analyst
+    - llm
+    - nlp
+    - computer vision
+    - agent
+    - ai workflows
+    - perception
+    - foundation models
+  maybe_role_terms:
+    - software engineer
+    - software engineering
+    - data engineer
+    - data engineering
+    - research
+    - product manager
+    - product management
+    - simulation
+    - quantitative
+    - data
+    - engineering
+    - platform
+  reject_role_terms:
+    - marketing
+    - finance
+    - accounting
+    - legal
+    - sales
+    - recruiting
+    - people
+    - communications
+    - brand
+    - design
+    - operations
+    - supply chain
+    - mechanical
+    - electrical
+    - hardware
+    - cybersecurity
+    - security
+    - mobile
+    - frontend
+    - embedded
+    - audit
+    - tax
+    - support
+    - policy
+  unknown_role: reject
+
+  accept_remote_us: true
+  regions:
+    - name: Orange County
+      priority: 3
+      places: [irvine, costa mesa, lake forest, foothill ranch, santa ana, anaheim, newport beach, tustin,
+               mission viejo, aliso viejo, huntington beach, fullerton, "orange, ca", laguna hills,
+               laguna niguel, rancho santa margarita, brea, cypress, garden grove, buena park, yorba linda]
+    - name: Bay Area
+      priority: 2
+      places: [san francisco, south san francisco, oakland, san jose, mountain view, sunnyvale, palo alto,
+               menlo park, redwood city, san mateo, foster city, santa clara, cupertino, fremont, berkeley,
+               burlingame, san bruno, milpitas, emeryville, los gatos, "bay area"]

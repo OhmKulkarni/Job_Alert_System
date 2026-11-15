@@ -21,3 +21,8 @@ venv.bak/
 # OS
 .DS_Store
 Thumbs.db 
+# Job Alert System v2
+config/profile.yaml
+data/
+out/
+.pytest_cache/

@@ -1,0 +1,49 @@
+# config/watchlist.yaml - companies whose job boards are checked every run.
+#
+# source: greenhouse | lever | ashby | smartrecruiters | workday | eightfold
+# slug:   the board's id. Find it in the company's careers URL, e.g.
+#         job-boards.greenhouse.io/<slug>, jobs.lever.co/<slug>, jobs.ashbyhq.com/<slug>,
+#         jobs.smartrecruiters.com/<slug>
+# Workday needs host + site (from <host>/<site> in the careers URL).
+# Eightfold needs host, and slug is the company domain.
+# Run `python -m jobalert check` after editing to confirm every board responds.
+
+companies:
+  # --- Orange County -------------------------------------------------------
+  - {key: anduril, name: Anduril, source: greenhouse, slug: andurilindustries}
+  - {key: twitch, name: Twitch, source: greenhouse, slug: twitch}
+  # Not verified yet; enable and run `check`:
+  - {key: edwards, name: Edwards Lifesciences, source: workday, slug: edwards,
+     host: edwards.wd5.myworkdayjobs.com, site: EdwardsCareers, search_text: intern, enabled: false}
+  - {key: skyworks, name: Skyworks, source: workday, slug: skyworks,
+     host: skyworks.wd1.myworkdayjobs.com, site: SkyworksCareers, search_text: intern, enabled: false}
+
+  # --- Companies with personal connections ---------------------------------
+  - {key: paypal, name: PayPal, source: eightfold, slug: paypal.com, host: paypal.eightfold.ai, search_text: intern}
+  - {key: linkedin, name: LinkedIn, source: smartrecruiters, slug: LinkedIn3}
+  - {key: broadcom, name: Broadcom, source: workday, slug: broadcom,
+     host: broadcom.wd1.myworkdayjobs.com, site: External_Career, search_text: intern}
+
+  # --- Bay Area: AI / ML heavy ----------------------------------------------
+  - {key: waymo, name: Waymo, source: greenhouse, slug: waymo}
+  - {key: doordash, name: DoorDash, source: greenhouse, slug: doordashusa}
+  - {key: databricks, name: Databricks, source: greenhouse, slug: databricks}
+  - {key: figma, name: Figma, source: greenhouse, slug: figma}
+  - {key: pinterest, name: Pinterest, source: greenhouse, slug: pinterest}
+  - {key: lyft, name: Lyft, source: greenhouse, slug: lyft}
+  - {key: affirm, name: Affirm, source: greenhouse, slug: affirm}
+  - {key: coinbase, name: Coinbase, source: greenhouse, slug: coinbase}
+  - {key: verkada, name: Verkada, source: greenhouse, slug: verkada}
+  - {key: scaleai, name: Scale AI, source: greenhouse, slug: scaleai}
+  - {key: stripe, name: Stripe, source: greenhouse, slug: stripe}
+  - {key: nuro, name: Nuro, source: greenhouse, slug: nuro}
+  - {key: roblox, name: Roblox, source: greenhouse, slug: roblox}
+  - {key: airbnb, name: Airbnb, source: greenhouse, slug: airbnb}
+  - {key: zoox, name: Zoox, source: lever, slug: zoox}
+  - {key: palantir, name: Palantir, source: lever, slug: palantir}
+  - {key: notion, name: Notion, source: ashby, slug: notion}
+  - {key: sierra, name: Sierra, source: ashby, slug: sierra}
+  - {key: decagon, name: Decagon, source: ashby, slug: decagon}
+  - {key: mercor, name: Mercor, source: ashby, slug: mercor}
+  - {key: snowflake, name: Snowflake, source: ashby, slug: snowflake}
+  - {key: openai, name: OpenAI, source: ashby, slug: openai}

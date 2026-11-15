@@ -1,350 +1,176 @@
-# 🚀 Job Alert System
+# Job Alert System v2: an agentic internship tracker
 
-An intelligent, automated job search and notification system that finds relevant job opportunities and delivers personalized email digests with AI-powered summaries and relevance scoring.
+A local-first agent that watches company job boards, remembers what it has already seen, and
+emails a short digest of internships that actually fit you. Each match comes with a fit score,
+the reasons behind it, and which version of your resume to send.
 
-## 📋 Table of Contents
+It runs entirely on your machine with a local model through [Ollama](https://ollama.com).
+No API keys, and your profile never leaves your computer.
 
-- [Features](#-features)
-- [System Architecture](#-system-architecture)
-- [Prerequisites](#-prerequisites)
-- [Installation](#-installation)
-- [Configuration](#-configuration)
-- [Usage](#-usage)
-- [Project Structure](#-project-structure)
-- [How It Works](#-how-it-works)
-- [Customization](#-customization)
-- [Troubleshooting](#-troubleshooting)
-- [Technologies Used](#-technologies-used)
-- [Contributing](#-contributing)
+## Why v2
 
-## ✨ Features
+v1 searched Google for phrases like "Python developer jobs in Irvine" and asked an LLM to
+rewrite the results. That gave search-result pages instead of real postings, a relevance
+score that only counted the search keywords, no memory between runs, and an LLM free to
+rewrite links. v2 is rebuilt around one idea:
 
-- **🔍 Intelligent Job Search**: Uses Serper.dev API to search for jobs across multiple keywords and locations
-- **🧠 AI-Powered Summarization**: Integrates with Mistral LLM to create structured job summaries
-- **📊 Relevance Scoring**: Advanced algorithm scores job relevance based on keyword matching
-- **🚫 Duplicate Detection**: Smart deduplication prevents duplicate job listings
-- **📧 Beautiful Email Alerts**: Modern, responsive HTML email templates with color-coded relevance scores
-- **⚙️ Flexible Configuration**: YAML-based configuration for easy customization
-- **📝 Comprehensive Logging**: Detailed logging for monitoring and debugging
+> **Deterministic first, AI only for judgment.** Cheap, explainable rules decide most
+> postings. The LLM agent only sees what the rules could not settle, and everything it
+> returns is validated before you see it.
 
-## 🏗️ System Architecture
+## How it works
 
-```
-┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│   Job Search    │    │   AI Summary     │    │  Email Digest   │
-│  (Serper API)   │───▶│  (Mistral LLM)   │───▶│   (SMTP/HTML)   │
-└─────────────────┘    └──────────────────┘    └─────────────────┘
-         │                       │                       │
-         ▼                       ▼                       ▼
-┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│ Relevance Scorer│    │  Deduplication   │    │  Configuration  │
-│   & Filtering   │    │    Manager       │    │   Management    │
-└─────────────────┘    └──────────────────┘    └─────────────────┘
+```mermaid
+flowchart LR
+    A[Company job boards<br/>Greenhouse, Lever, Ashby,<br/>SmartRecruiters, Workday, Eightfold] --> B[(SQLite memory<br/>new / seen / closed)]
+    B --> C{Rule filter<br/>internship? season?<br/>degree? role? region?}
+    C -- reject --> X[Dropped, with a reason]
+    C -- shortlist / maybe --> D[Agent loop<br/>local Ollama model]
+    D <--> T[Tools<br/>read_posting, search_posting,<br/>get_profile, company_history]
+    D --> G{Guardrails<br/>schema check, grounded evidence,<br/>confidence and borderline score}
+    G -- passes --> M[Matches]
+    G -- flagged --> R[Worth a second look]
+    M --> O[Draft note to your contact<br/>never sent automatically]
+    M & R & O --> E[Digest email or out/digest.html]
 ```
 
-## 🔧 Prerequisites
+1. **Fetch** every company on `config/watchlist.yaml` through the job board's public JSON API.
+   These are real postings with real links. If one board fails, it is reported in the
+   digest and the rest of the run carries on.
+2. **Remember.** SQLite tracks every posting. You only hear about new ones, plus postings
+   you cared about that have since **closed**. Closing is only recorded when that company's
+   board was fetched successfully, so an outage never looks like every job disappearing.
+3. **Rule filter.** These checks run without an LLM: is it an internship (and not
+   *Internal* Audit or *International* Payroll), the target season, open to master's
+   students, an on-target role, and in Orange County, the Bay Area or remote US. Each
+   check can pass, reject or say it can't tell. "Can't tell" sends the posting to the agent
+   with a note, rather than throwing it away.
+4. **Agent.** For each survivor, best first, a local model works through a tool loop. It
+   reads the posting page by page, searches it for specific requirements, reads your
+   profile, and checks other roles at the same company. It then submits a structured
+   assessment:
+   - `fit_score` (0–100)
+   - `recommended_resume` (one of your resume versions)
+   - `ai_forward` (does the role build with AI tools, or is it raw coding?)
+   - `confidence`
+   - `reasons` and `gaps`
+   - `evidence` quoted from the posting
+5. **Guardrails.**
+   - Tool arguments are checked against a schema, and mistakes go back to the model so it
+     can correct itself.
+   - If the model never submits, one final call is made with Ollama's structured output,
+     constrained to the schema.
+   - Evidence quotes that don't appear in the posting are dropped.
+   - Low confidence, a borderline score or ungrounded evidence moves the posting to
+     **Worth a second look** instead of **Matches**.
+   - There is a step limit per posting and a hard limit on model calls per run.
+6. **Outreach.** For strong matches at a company where you have a friend, the agent drafts
+   a short, informal note that asks for a quick call. It is only a draft and is never sent.
+7. **Digest.** The digest is an HTML email with a plain-text version, and every value from
+   the web is escaped. Use `--dry-run` to write it to `out/digest.html` instead.
 
-Before running the Job Alert System, ensure you have the following:
+## Setup
 
-### Software Requirements
-- **Python 3.8+**
-- **Ollama** (for running Mistral LLM locally)
-- **Gmail Account** (or other SMTP-compatible email service)
-
-### API Keys & Services
-- **Serper.dev API Key** - [Get it here](https://serper.dev/)
-- **Email App Password** - [Gmail Setup Guide](https://support.google.com/accounts/answer/185833)
-
-## 📦 Installation
-
-### 1. Clone the Repository
 ```bash
-git clone https://github.com/OhmKulkarni/Job_Alert_System
+git clone https://github.com/OhmKulkarni/Job_Alert_System.git
 cd Job_Alert_System
-```
-
-### 2. Install Python Dependencies
-```bash
+python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
+
+# A local model with tool calling
+ollama pull qwen2.5:7b
+
+cp config/profile.example.yaml config/profile.yaml   # make it yours (git-ignored)
+cp .env.example .env                                 # email settings (git-ignored)
 ```
 
-### 3. Install and Setup Ollama
+Then check that every job board and the model respond:
+
 ```bash
-# Install Ollama (macOS)
-curl -fsSL https://ollama.ai/install.sh | sh
-
-# Or visit https://ollama.ai for other platforms
-
-# Pull Mistral model
-ollama pull mistral:7b
-
-# Start Ollama service
-ollama serve
+python -m jobalert check
 ```
 
-### 4. Verify Ollama Installation
+## Usage
+
 ```bash
-# Test if Mistral is working
-curl http://localhost:11434/api/generate -d '{
-  "model": "mistral:7b",
-  "prompt": "Hello world",
-  "stream": false
-}'
+python -m jobalert run --dry-run          # full run, digest saved to out/digest.html
+python -m jobalert run                    # full run, digest emailed
+python -m jobalert run --no-llm           # rules only (no Ollama needed)
+python -m jobalert run --company paypal --limit 5
+python -m jobalert list                   # assessed open postings, best first
+python -m jobalert mark <id> applied      # applied | saved | ignored | new
 ```
 
-## ⚙️ Configuration
+The first run sees every posting as new, so it can take a while with a local model. The
+agent assesses up to `max_postings_per_run` (25 by default), best first, and the rest
+are assessed on later runs.
 
-### 1. Environment Variables (.env)
+### Run it daily
 
-Create a `.env` file in the project root:
+The model is local, so the schedule runs on your own machine.
 
-```env
-# LLM Configuration
-MODEL=mistral:7b
-
-# Serper API Configuration
-SERPER_API_KEY=your_serper_api_key_here
-
-# Email Configuration
-SMTP_SERVER=smtp.gmail.com
-SMTP_PORT=587
-EMAIL_USER=your_email@gmail.com
-EMAIL_PASS=your_app_password_here
-EMAIL_TO=recipient@gmail.com
+**macOS / Linux (cron):** run `crontab -e` and add:
+```
+0 8 * * * cd /path/to/Job_Alert_System && .venv/bin/python -m jobalert run >> out/cron.log 2>&1
 ```
 
-### 2. Job Search Configuration (config/job_alert.yaml)
+**Windows (Task Scheduler):** create a daily task.
+- Program: `C:\path\to\Job_Alert_System\.venv\Scripts\python.exe`
+- Arguments: `-m jobalert run`
+- Start in: `C:\path\to\Job_Alert_System`
 
-```yaml
-name: Job Alert for User
-keywords:
-  - "Entry Level Jobs"
-  - "Freelance Jobs" 
-  - "Python developer"
-  - "Remote AI jobs"
-locations:
-  - "Remote"
-  - "Irvine"
-recipient_email: your_email@gmail.com
-frequency: daily
-max_results: 10
-last_sent: null
-```
+## Configuration
 
-### 3. AI Prompts Configuration (config/prompts.yaml)
+| File | What it controls |
+|---|---|
+| `config/watchlist.yaml` | Companies and their job-board API (source + slug). Add a company in one line. |
+| `config/settings.yaml` | Rule terms, target regions, model, agent budgets, review band |
+| `config/profile.yaml` | You: summary, strengths, preferences, resume versions, contacts. **Git-ignored.** |
+| `.env` | SMTP settings for the email digest. **Git-ignored.** |
 
-The system includes pre-configured prompts for the AI summarization. You can customize these in `config/prompts.yaml`.
+To find a company's board, open their careers page and look at the URL:
+- `job-boards.greenhouse.io/<slug>` → `greenhouse`
+- `jobs.lever.co/<slug>` → `lever`
+- `jobs.ashbyhq.com/<slug>` → `ashby`
+- `jobs.smartrecruiters.com/<slug>` → `smartrecruiters`
+- `<tenant>.wdN.myworkdayjobs.com/<site>` → `workday` (host + site)
 
-### 4. Getting API Keys
-
-#### Serper.dev API Key:
-1. Visit [serper.dev](https://serper.dev/)
-2. Sign up for a free account
-3. Navigate to your dashboard
-4. Copy your API key
-5. Add it to your `.env` file
-
-#### Gmail App Password:
-1. Enable 2-Factor Authentication on your Gmail account
-2. Go to [Google Account settings](https://myaccount.google.com/)
-3. Navigate to Security → 2-Step Verification → App Passwords
-4. Generate a new app password for "Mail"
-5. Use this password in your `.env` file (not your regular Gmail password)
-
-## 🚀 Usage
-
-### Basic Usage
-
-1. **Start Ollama** (if not already running):
-   ```bash
-   ollama serve
-   ```
-
-2. **Run the Job Alert System**:
-   ```bash
-   python main.py
-   ```
-
-### What Happens:
-
-1. **🔍 Job Search**: System searches for jobs using your configured keywords and locations
-2. **📊 Scoring**: Each job gets a relevance score (0-100%) based on keyword matching
-3. **🚫 Deduplication**: Duplicate jobs are filtered out using advanced hashing
-4. **🧠 AI Summary**: Mistral LLM creates structured summaries of job listings
-5. **📧 Email Delivery**: You receive a beautiful HTML email digest with:
-   - Color-coded relevance scores
-   - Job details and descriptions
-   - Direct application links
-   - Search statistics
-
-### Sample Output
-
-The system will output logs like:
-```
-[2024-12-19 10:30:15] INFO - Starting Job Alert System
-[2024-12-19 10:30:16] INFO - Loading configuration files...
-[2024-12-19 10:30:17] INFO - Job search completed. Found 8 job listings
-[2024-12-19 10:30:25] INFO - LLM summarization completed
-[2024-12-19 10:30:26] INFO - ✅ Email sent to your_email@gmail.com
-```
-
-## 📁 Project Structure
+## Project layout
 
 ```
-job-alert-system/
-├── main.py                     # Main application entry point
-├── requirements.txt            # Python dependencies
-├── .env                       # Environment variables (create this)
-├── README.md                  # This file
-│
-├── config/
-│   ├── job_alert.yaml         # Job search configuration
-│   └── prompts.yaml           # AI prompt templates
-│
-├── tools/
-│   ├── serper_job_search_tool.py      # Job search functionality
-│   ├── llm_sumarizer_tool.py          # AI summarization
-│   ├── html_email_formatter.py        # Email template engine
-│   ├── email_sender_tool.py           # Email delivery
-│   ├── job_relevance_scorer.py        # Relevance scoring algorithm
-│   └── job_deduplication.py           # Duplicate detection
-│
-└── utils/
-    └── logger.py              # Logging configuration
+jobalert/
+  sources/      one adapter per job-board API, normalized to a Posting
+  filters.py    deterministic rules (pass / reject / can't tell, with reasons)
+  store.py      SQLite memory: postings, assessments, outreach drafts, runs
+  llm.py        Ollama client (tools + structured outputs) and call budget
+  agent/        tool definitions, agent loop, guardrails, prompts
+  digest.py     HTML + text digest
+  pipeline.py   one run, end to end
+  cli.py        run / check / list / mark
+tests/          69 tests; fakes for every board and the model (no network needed)
 ```
 
-## 🔄 How It Works
+## Tests
 
-### 1. Job Search Process
-- Uses Serper.dev API to search Google for job listings
-- Searches across multiple keyword-location combinations
-- Extracts job title, company, location, description, and URL
-
-### 2. Relevance Scoring Algorithm
-```python
-# Scoring weights:
-- Job Title Match: 3.0x weight
-- Company Match: 1.5x weight  
-- Description Match: 1.0x weight
-- Location Match: 0.5x weight
-
-# Score calculation:
-- Exact keyword match: 2.0x bonus
-- Partial keyword match: Proportional scoring
-- Final score: Normalized to 0-100%
+```bash
+pip install -r requirements-dev.txt
+pytest
 ```
 
-### 3. Deduplication Strategy
-- Creates MD5 hash from normalized title + company + location
-- Filters out exact duplicates
-- Maintains seen job registry during search session
+The tests cover:
+- every job-board parser
+- the rule filter, including real titles taken from live boards
+- memory, including what happens when a source fails
+- each agent guardrail: bad tool arguments, unknown tools, a forced final answer, invented
+  evidence, review triggers and the call budget
+- a full multi-run pipeline: new postings, then nothing new, then a posting closing
+- HTML escaping and running with Ollama down
 
-### 4. AI Summarization
-- Sends job data to local Mistral LLM
-- Structures response as JSON with job details
-- Fallback to simple formatting if AI parsing fails
+## Limits
 
-### 5. Email Generation
-- Creates responsive HTML email template
-- Color-codes jobs by relevance score:
-  - 🟢 Green (75%+): High relevance
-  - 🟠 Orange (50-74%): Medium relevance  
-  - 🔴 Red (25-49%): Low relevance
-  - ⚪ Gray (<25%): Very low relevance
-
-## 🎨 Customization
-
-### Adding New Keywords/Locations
-Edit `config/job_alert.yaml`:
-```yaml
-keywords:
-  - "Data Scientist"
-  - "Machine Learning Engineer"
-  - "Your Custom Keywords"
-locations:
-  - "San Francisco"
-  - "New York"
-  - "Your Preferred Locations"
-```
-
-### Customizing Email Templates
-Modify `tools/html_email_formatter.py` to change:
-- Email styling and colors
-- Layout and structure
-- Additional job information display
-
-### Adjusting Relevance Scoring
-Edit `tools/job_relevance_scorer.py` to modify:
-- Keyword matching algorithms
-- Field importance weights
-- Scoring thresholds
-
-### Changing AI Prompts
-Update `config/prompts.yaml` to customize:
-- AI summarization style
-- Output format requirements
-- Additional instructions for the LLM
-
-## 🐛 Troubleshooting
-
-### Common Issues
-
-#### 1. "SERPER_API_KEY not found"
-- Verify your `.env` file exists and contains the correct API key
-- Check that the `.env` file is in the project root directory
-
-#### 2. "Error communicating with Mistral API"
-- Ensure Ollama is running: `ollama serve`
-- Verify Mistral model is installed: `ollama list`
-- Check if port 11434 is available
-
-#### 3. "Failed to send email"
-- Verify Gmail app password (not regular password)
-- Check if 2FA is enabled on your Gmail account
-- Ensure SMTP settings are correct
-
-#### 4. "Configuration file not found"
-- Verify `config/job_alert.yaml` and `config/prompts.yaml` exist
-- Check file paths and permissions
-
-### Debug Mode
-Add more verbose logging by modifying `utils/logger.py`:
-```python
-logging.basicConfig(level=logging.DEBUG)
-```
-
-## 🛠️ Technologies Used
-
-- **Python 3.8+** - Core programming language
-- **CrewAI Tools** - Framework for building AI tools
-- **Serper.dev API** - Google search API for job listings
-- **Ollama + Mistral 7B** - Local LLM for AI summarization
-- **SMTP/Email** - Email delivery system
-- **YAML** - Configuration management
-- **HTML/CSS** - Email template styling
-- **Logging** - System monitoring and debugging
-
-## 🤝 Contributing
-
-This is a college project, but suggestions for improvements are welcome:
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/improvement`)
-3. Commit your changes (`git commit -am 'Add new feature'`)
-4. Push to the branch (`git push origin feature/improvement`)
-5. Create a Pull Request
-
-## 📄 License
-
-This project is created for educational purposes as part of a college assignment.
-
-## 🙏 Acknowledgments
-
-- **Serper.dev** for providing job search API
-- **Ollama Team** for local LLM infrastructure
-- **Mistral AI** for the language model
-- **CrewAI** for the tool framework
-
----
-
-**Built with claude.ai for automated job hunting and learning AI integration**
+- Workday and Eightfold boards are queried with a search term (`search_text`). That keeps
+  the requests small, but it means they only find postings that match the term.
+- Eightfold (PayPal) uses the career site's own search API, which is not a documented
+  public API, so it may change.
+- A 7–8B local model is much weaker than a frontier model. The guardrails are there so
+  its mistakes end up in **Worth a second look** rather than in **Matches**.
