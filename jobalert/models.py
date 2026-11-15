@@ -55,7 +55,9 @@ class AIForward(str, Enum):
 class Assessment(BaseModel):
     """What the agent must return for each posting. Validated, never trusted blindly."""
 
-    fit_score: int = Field(ge=0, le=100, description="0-100 fit between the candidate and this role")
+    fit_score: int = Field(
+        ge=0, le=100, description="Fit on a 0-100 scale (not 0-10): 85 = strong fit, 50 = partial, 15 = poor"
+    )
     recommended_resume: str = Field(description="Key of the resume variant to send")
     confidence: Confidence
     ai_forward: AIForward = Field(
