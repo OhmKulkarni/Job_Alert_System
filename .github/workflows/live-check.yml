@@ -47,6 +47,16 @@ jobs:
             echo "## Job boards"; echo '```'; cat check.txt 2>/dev/null; echo '```'
             echo "## Run"; echo '```'; tail -n 40 run.txt 2>/dev/null; echo '```'
             echo "## Assessed postings"; echo '```'; python -m jobalert list 2>/dev/null; echo '```'
+            echo "## Assessment details"; echo '```'
+            python - <<'PY' 2>/dev/null
+          import json, sqlite3
+          db = sqlite3.connect("data/jobs.db"); db.row_factory = sqlite3.Row
+          for r in db.execute("SELECT p.title, a.* FROM assessments a JOIN postings p USING(uid)"):
+              print(f"{r['title']}  fit={r['fit_score']} conf={r['confidence']} ai={r['ai_forward']} resume={r['recommended_resume']}")
+              for k in ("reasons", "gaps", "evidence", "review_reasons", "tool_calls"):
+                  print(f"  {k}: {json.loads(r[k] or '[]')}")
+          PY
+            echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
       - uses: actions/upload-artifact@v4
