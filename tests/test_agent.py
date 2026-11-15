@@ -91,6 +91,7 @@ def test_invented_evidence_is_dropped_and_flagged(config, posting, agent_cfg):
 @pytest.mark.parametrize("override,reason", [
     ({"confidence": "low"}, "agent confidence is low"),
     ({"fit_score": 62}, "borderline score (62)"),
+    ({"fit_score": 8}, "very low score (8); check it was on the 0-100 scale"),
 ])
 def test_review_triggers(config, posting, agent_cfg, override, reason):
     rec = JobAgent(FakeModel([call("submit_assessment", **assessment_args(**override))]),
