@@ -1,0 +1,38 @@
+# config/profile.example.yaml
+# Copy to config/profile.yaml (git-ignored) and make it yours. The agent reads this
+# to judge fit, so keep it honest and specific. Don't commit private details.
+
+name: Ohm Kulkarni
+summary: >
+  Master of Data Science student at UC Irvine (graduating Dec 2027) with a B.Tech in
+  Computer Engineering. Builds agentic AI systems that pair deterministic rules with LLM
+  judgment and human review, and trains vision models from scratch.
+degree: Master's (in progress, graduating Dec 2027)
+strengths:
+  - Agentic AI and LLM application design (tool use, structured outputs, guardrails)
+  - Multi-agent systems with CrewAI
+  - Applied ML and deep learning in PyTorch (Vision Transformers, CNNs)
+  - Data wrangling and analysis in Python (pandas, NumPy, scikit-learn)
+  - Writing for business and technical audiences
+preferences:
+  - Prefers roles that build with or use AI tools, not raw hand-coding
+  - Summer 2027 internship, Orange County first, Bay Area if the role is strong
+  - U.S. citizen, no sponsorship needed
+
+resumes:
+  - key: aveva
+    label: Industrial AI resume
+    use_for: Industrial software, manufacturing, energy or operations-technology companies
+  - key: ai_engineer
+    label: AI Engineer resume
+    use_for: Roles building LLM apps, agents, AI tooling or AI-assisted workflows
+  - key: data_science
+    label: Data Science / ML resume
+    use_for: Data science, analytics, applied science and ML modeling roles
+
+# Friends who work at watchlist companies. company_key matches config/watchlist.yaml.
+# For strong matches the agent drafts (never sends) a short note to them.
+connections:
+  - {company_key: paypal, name: "Friend at PayPal"}
+  - {company_key: broadcom, name: "Friend at Broadcom"}
+  - {company_key: linkedin, name: "Friend at LinkedIn"}
